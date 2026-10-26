@@ -201,9 +201,8 @@ function generateZshArgs(cmd: Command): string {
         opt.required || opt.optional
           ? `${opt.optional ? "::" : ":"}${opt.attributeName()}:${choices ? `(${choices})` : ""}`
           : "";
-      // `=` accepts long-option values either after an equals sign or in the next word.
-      const optionSpec = (flag: string) =>
-        opt.required || opt.optional ? `${flag}${flag.startsWith("--") ? "=" : ""}` : flag;
+      // `=` permits long-option values both after an equals sign and in the next word.
+      const optionSpec = (flag: string) => (argument && flag.startsWith("--") ? `${flag}=` : flag);
       if (alternate) {
         return `"${visibility}(${name} ${alternate})"{${optionSpec(name)},${optionSpec(alternate)}}"[${desc}]${argument}"`;
       }
@@ -376,7 +375,11 @@ Register-ArgumentCompleter -Native -CommandName ${rootCmd} -ScriptBlock {
     }
 
     for ($i = 1; $i -lt $commandElements.Count; $i++) {
-        $element = $commandElements[$i].Extent.Text
+        $element = if ($commandElements[$i] -is [System.Management.Automation.Language.StringConstantExpressionAst]) {
+            $commandElements[$i].Value
+        } else {
+            $commandElements[$i].Extent.Text
+        }
         if ($i -eq $commandElements.Count - 1 -and $wordToComplete -ne "") { break }
         if ($element -like "-*") {
             $flag = ($element -split '=', 2)[0]
